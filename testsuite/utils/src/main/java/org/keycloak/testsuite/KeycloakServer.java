@@ -33,7 +33,6 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.RealmModel;
 import org.keycloak.representations.idm.RealmRepresentation;
-import org.keycloak.services.filters.KeycloakSessionServletFilter;
 import org.keycloak.services.managers.ApplianceBootstrap;
 import org.keycloak.services.managers.RealmManager;
 import org.keycloak.services.resources.KeycloakApplication;
@@ -398,8 +397,6 @@ public class KeycloakServer {
             di.setContextPath("/auth");
             di.setDeploymentName("Keycloak");
             di.setDefaultEncoding("UTF-8");
-
-            di.addInitParameter(KeycloakApplication.KEYCLOAK_EMBEDDED, "true");
 
             di.setDefaultServletConfig(new DefaultServletConfig(true));
 

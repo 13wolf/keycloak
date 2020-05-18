@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2018 Red Hat, Inc. and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,6 @@
 
 import * as React from 'react';
 
-import * as moment from 'moment';
-
 import {KeycloakService} from './keycloak-service/keycloak.service';
 
 import {PageNav} from './PageNav';
@@ -25,7 +23,6 @@ import {PageToolbar} from './PageToolbar';
 import {makeRoutes} from './ContentPages';
 
 import {
-    Avatar,
     Brand,
     Page,
     PageHeader,
@@ -35,13 +32,13 @@ import {
 
 declare function toggleReact(): void;
 declare function isWelcomePage(): boolean;
+declare function loggedInUserName(): string;
 
 declare const locale: string;
 declare const resourceUrl: string;
 
-const pFlyImages = resourceUrl + '/node_modules/@patternfly/patternfly/assets/images/';
-const brandImg = resourceUrl + '/app/assets/img/keycloak-logo-min.png';
-const avatarImg = pFlyImages + 'img_avatar.svg';
+declare const brandImg: string;
+declare const brandUrl: string;
 
 export interface AppProps {};
 export class App extends React.Component<AppProps> {
@@ -60,24 +57,22 @@ export class App extends React.Component<AppProps> {
             this.kcSvc.login();
         }
 
-        // globally set up locale for date formatting
-        moment.locale(locale);
-
+        const username = (
+            <span style={{marginLeft: '10px'}} id="loggedInUser">{loggedInUserName()}</span>
+        );
         const Header = (
             <PageHeader
-                logo={<Brand src={brandImg} alt="Patternfly Logo" />}
+                logo={<a id="brandLink" href={brandUrl}><Brand src={brandImg} alt="Logo" className="brand"/></a>}
                 toolbar={<PageToolbar/>}
-                avatar={<Avatar src={avatarImg} alt="Avatar image" />}
+                avatar={username}
                 showNavToggle
             />
         );
 
         const Sidebar = <PageSidebar nav={<PageNav/>} />;
-        
-        const fullHeight = { height: '100%'};
-        
+
         return (
-            <span style={fullHeight}>
+            <span style={{ height: '100%'}}>
                 <Page header={Header} sidebar={Sidebar} isManagedSidebar>
                     <PageSection>
                         {makeRoutes()}

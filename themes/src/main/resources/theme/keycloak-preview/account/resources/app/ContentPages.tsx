@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2019 Red Hat, Inc. and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@ import {Msg} from './widgets/Msg';
 import {PageNotFound} from './content/page-not-found/PageNotFound';
 
 export interface ContentItem {
+    id?: string;
     label: string;
     labelParams?: string[];
     hidden?: boolean;
@@ -69,7 +70,7 @@ function isChildOf(parent: Expansion, child: PageDef): boolean {
         if (isExpansion(item) && isChildOf(item, child)) return true;
         if (parent.groupId === child.groupId) return true;
     }
-    
+
     return false;
 }
 
@@ -77,8 +78,10 @@ function createNavItems(activePage: PageDef, contentParam: ContentItem[], groupN
     if (typeof content === 'undefined') return (<React.Fragment/>);
 
     const links: React.ReactElement[] = contentParam.map((item: ContentItem) => {
+        const navLinkId = `nav-link-${item.id}`;
         if (isExpansion(item)) {
-            return <NavExpandable groupId={item.groupId} 
+            return <NavExpandable id={navLinkId}
+                                  groupId={item.groupId}
                                   key={item.groupId}
                                   title={Msg.localize(item.label, item.labelParams)}
                                   isExpanded={isChildOf(item, activePage)}>
@@ -86,11 +89,12 @@ function createNavItems(activePage: PageDef, contentParam: ContentItem[], groupN
                     </NavExpandable>
         } else {
             const page: PageDef = item as PageDef;
-            return <NavItem groupId={item.groupId} 
-                            itemId={item.itemId} 
-                            key={item.itemId} 
-                            to={'#/app/' + page.path} 
-                            isActive={activePage.itemId === item.itemId} 
+            return <NavItem id={navLinkId}
+                            groupId={item.groupId}
+                            itemId={item.itemId}
+                            key={item.itemId}
+                            to={'#/app/' + page.path}
+                            isActive={activePage.itemId === item.itemId}
                             type="button">
                         {Msg.localize(page.label, page.labelParams)}
                     </NavItem>
@@ -108,7 +112,7 @@ export function makeNavItems(activePage: PageDef): React.ReactNode {
 function setIds(contentParam: ContentItem[], groupNum: number): number {
     if (typeof contentParam === 'undefined') return groupNum;
     let expansionGroupNum = groupNum;
-    
+
     for (let i = 0; i < contentParam.length; i++) {
         const item: ContentItem = contentParam[i];
         if (isExpansion(item)) {
@@ -122,7 +126,7 @@ function setIds(contentParam: ContentItem[], groupNum: number): number {
             item.itemId = itemId(groupNum, i);
         }
     };
-    
+
     return expansionGroupNum;
 }
 
@@ -130,7 +134,7 @@ export function initGroupAndItemIds(): void {
     setIds(content, 0);
     console.log({content});
 }
-   
+
 // get rid of Expansions and put all PageDef items into a single array
 export function flattenContent(pageDefs: ContentItem[]): PageDef[] {
     const flat: PageDef[] = [];
@@ -149,7 +153,7 @@ export function flattenContent(pageDefs: ContentItem[]): PageDef[] {
 export function makeRoutes(): React.ReactNode {
     if (typeof content === 'undefined') return (<span/>);
 
-    const pageDefs: PageDef[] = flattenContent(content); 
+    const pageDefs: PageDef[] = flattenContent(content);
 
     const routes: React.ReactElement<Route>[] = pageDefs.map((page: PageDef) => {
         if (isModulePageDef(page)) {
