@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2019 Red Hat, Inc. and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,13 +15,12 @@
  */
 
 import * as React from 'react';
- 
+
 import {Dropdown, KebabToggle, Toolbar, ToolbarGroup, ToolbarItem} from '@patternfly/react-core';
 
 import {ReferrerDropdownItem} from './widgets/ReferrerDropdownItem';
 import {ReferrerLink} from './widgets/ReferrerLink';
 import {Features} from './widgets/features';
-import {LocaleNav,LocaleDropdown} from './widgets/LocaleSelectors';
 import {LogoutButton,LogoutDropdownItem} from './widgets/Logout';
 
 declare const referrerName: string;
@@ -34,18 +33,18 @@ export class PageToolbar extends React.Component<PageToolbarProps, PageToolbarSt
 
     public constructor(props: PageToolbarProps) {
         super(props);
-        
+
         this.state = {
             isKebabDropdownOpen: false,
         };
     }
-    
+
     private onKebabDropdownToggle = (isKebabDropdownOpen: boolean) => {
         this.setState({
             isKebabDropdownOpen
         });
     };
-    
+
     public render(): React.ReactNode {
         const kebabDropdownItems = [];
         if (this.hasReferrer) {
@@ -53,13 +52,9 @@ export class PageToolbar extends React.Component<PageToolbarProps, PageToolbarSt
                 <ReferrerDropdownItem key='referrerDropdownItem'/>
             )
         }
-        
-        if (features.isInternationalizationEnabled) {
-            kebabDropdownItems.push(<LocaleNav key='kebabLocaleNav'/>);
-        }
-            
+
         kebabDropdownItems.push(<LogoutDropdownItem key='LogoutDropdownItem'/>);
-        
+
         return (
             <Toolbar>
                 {this.hasReferrer &&
@@ -69,23 +64,17 @@ export class PageToolbar extends React.Component<PageToolbarProps, PageToolbarSt
                         </ToolbarItem>
                     </ToolbarGroup>
                 }
-                    
+
                 <ToolbarGroup key='secondGroup'>
-                    {features.isInternationalizationEnabled &&
-                        <ToolbarItem className="pf-m-icons" key='locale'>
-                            <LocaleDropdown/>
-                        </ToolbarItem>
-                    }
-                    
                     <ToolbarItem className="pf-m-icons" key='logout'>
                         <LogoutButton/>
                     </ToolbarItem>
-                    
+
                     <ToolbarItem key='kebab' className="pf-m-mobile">
                         <Dropdown
                             isPlain
                             position="right"
-                            toggle={<KebabToggle onToggle={this.onKebabDropdownToggle} />}
+                            toggle={<KebabToggle id="mobileKebab" onToggle={this.onKebabDropdownToggle} />}
                             isOpen={this.state.isKebabDropdownOpen}
                             dropdownItems={kebabDropdownItems}
                         />

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {KeycloakLoginOptions, KeycloakError} from './keycloak.d';
+import {KeycloakLoginOptions, KeycloakError} from "../../../../../../../../../../adapters/oidc/js/src/main/resources/keycloak";
 
 // keycloak.js downloaded in index.ftl
 declare function Keycloak(config?: string|{}): Keycloak.KeycloakInstance;
@@ -29,13 +29,13 @@ export class KeycloakService {
     private static instance: KeycloakService = new KeycloakService();
 
     private constructor() {
-        
+
     }
-    
+
     public static get Instance(): KeycloakService  {
         return this.instance;
     }
-    
+
     /**
      * Configure and initialize the Keycloak adapter.
      *
@@ -58,7 +58,7 @@ export class KeycloakService {
                 });
         });
     }
-    
+
     public authenticated(): boolean {
         return KeycloakService.keycloakAuth.authenticated ? KeycloakService.keycloakAuth.authenticated : false;
     }
@@ -74,12 +74,12 @@ export class KeycloakService {
     public account(): void {
         KeycloakService.keycloakAuth.accountManagement();
     }
-    
+
     public authServerUrl(): string | undefined {
         const authServerUrl = KeycloakService.keycloakAuth.authServerUrl;
         return authServerUrl!.charAt(authServerUrl!.length - 1) === '/' ?  authServerUrl : authServerUrl + '/';
     }
-    
+
     public realm(): string | undefined {
         return KeycloakService.keycloakAuth.realm;
     }

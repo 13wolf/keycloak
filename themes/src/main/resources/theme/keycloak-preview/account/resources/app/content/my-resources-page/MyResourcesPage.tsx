@@ -15,17 +15,17 @@
  */
 
 import * as React from 'react';
-import {AxiosResponse} from 'axios';
 
-import * as parse from 'parse-link-header';
+import parse from '../../util/ParseLink';
 
 import { Button, Level, LevelItem, Stack, StackItem, Tab, Tabs, TextInput } from '@patternfly/react-core';
 
-import {AccountServiceClient} from '../../account-service/account.service';
+import AccountService, {HttpResponse} from '../../account-service/account.service';
 
 import {ResourcesTable} from './ResourcesTable';
 import {ContentPage} from '../ContentPage';
 import {Msg} from '../../widgets/Msg';
+import { SharedResourcesTable } from './SharedResourcesTable';
 
 export interface MyResourcesPageProps {
 }
@@ -101,7 +101,7 @@ export class MyResourcesPage extends React.Component<MyResourcesPageProps, MyRes
 
     private isSharedWithMeTab(): boolean {
         return this.state.activeTabKey === SHARED_WITH_ME_TAB;
-    } 
+    }
 
     private hasNext(): boolean {
         if (this.isSharedWithMeTab()) {
@@ -112,7 +112,6 @@ export class MyResourcesPage extends React.Component<MyResourcesPageProps, MyRes
     }
 
     private hasPrevious(): boolean {
-        console.log('prev url=' + this.state.myResources.prevUrl);
         if (this.isSharedWithMeTab()) {
             return (this.state.sharedWithMe.prevUrl !== null) && (this.state.sharedWithMe.prevUrl !== '');
         } else {
@@ -137,26 +136,20 @@ export class MyResourcesPage extends React.Component<MyResourcesPageProps, MyRes
     }
 
     private fetchResources(url: string, extraParams?: Record<string, string|number>): void {
-        AccountServiceClient.Instance.doGet(url, 
-                                            {params: extraParams}
-                                            )
-            .then((response: AxiosResponse<Resource[]>) => {
-                const resources: Resource[] = response.data;
+        AccountService.doGet<Resource[]>(url, {params: extraParams})
+            .then((response: HttpResponse<Resource[]>) => {
+                const resources: Resource[] = response.data || [];
                 resources.forEach((resource: Resource) => resource.shareRequests = []);
 
                 // serialize the Scope objects from JSON so that toString() will work.
                 resources.forEach((resource: Resource) => resource.scopes = resource.scopes.map(this.makeScopeObj));
 
                 if (this.isSharedWithMeTab()) {
-                    console.log('Shared With Me Resources: ');
-                    this.setState({sharedWithMe: this.parseResourceResponse(response)});
+                    this.setState({sharedWithMe: this.parseResourceResponse(response)}, this.fetchPending);
                 } else {
-                    console.log('MyResources: ');
                     this.setState({myResources: this.parseResourceResponse(response)}, this.fetchPermissionRequests);
                 }
-
-                console.log({response});
-            })
+            });
     }
 
     private makeScopeObj = (scope: Scope): Scope => {
@@ -164,43 +157,52 @@ export class MyResourcesPage extends React.Component<MyResourcesPageProps, MyRes
     }
 
     private fetchPermissionRequests = () => {
-        console.log('fetch permission requests');
         this.state.myResources.data.forEach((resource: Resource) => {
             this.fetchShareRequests(resource);
         });
     }
 
     private fetchShareRequests(resource: Resource): void {
-        AccountServiceClient.Instance.doGet('/resources/' + resource._id + '/permissions/requests')
-            .then((response: AxiosResponse<Permission[]>) => {
-                //console.log('Share requests for ' + resource.name);
-                //console.log({response});
-                resource.shareRequests = response.data;
+        AccountService.doGet('/resources/' + resource._id + '/permissions/requests')
+            .then((response: HttpResponse<Permission[]>) => {
+                resource.shareRequests = response.data || [];
                 if (resource.shareRequests.length > 0) {
-                    //console.log('forcing update');
                     this.forceUpdate();
                 }
             });
     }
 
-    private parseResourceResponse(response: AxiosResponse<Resource[]>): PaginatedResources {
-        const links: string = response.headers.link;
-        const parsed: (parse.Links | null) = parse(links);
+    private fetchPending = async () => {
+        const response: HttpResponse<Resource[]> = await AccountService.doGet(`/resources/pending-requests`);
+        const resources: Resource[] = response.data || [];
+        resources.forEach((pendingRequest: Resource) => {
+            this.state.sharedWithMe.data.forEach(resource => {
+                if (resource._id === pendingRequest._id) {
+                    resource.shareRequests = [{username: 'me', scopes: pendingRequest.scopes}]
+                    this.forceUpdate();
+                }
+            });
+        });
+    }
+
+    private parseResourceResponse(response: HttpResponse<Resource[]>): PaginatedResources {
+        const links: string | undefined = response.headers.get('link') || undefined;
+        const parsed = parse(links);
 
         let next = '';
         let prev = '';
 
         if (parsed !== null) {
-            if (parsed.hasOwnProperty('next')) next = parsed.next.url;
-            if (parsed.hasOwnProperty('prev')) prev = parsed.prev.url;
+            if (parsed.next) next = parsed.next;
+            if (parsed.prev) prev = parsed.prev;
         }
 
-        const resources = response.data;
+        const resources: Resource[] = response.data || [];
 
         return {nextUrl: next, prevUrl: prev, data: resources};
     }
 
-    private makeTab(eventKey: number, title: string, resources: PaginatedResources, noResourcesMessage: string): React.ReactNode {
+    private makeTab(eventKey: number, title: string, resources: PaginatedResources, sharedResourcesTab: boolean): React.ReactNode {
         return (
             <Tab eventKey={eventKey} title={Msg.localize(title)}>
                 <Stack gutter="md">
@@ -213,7 +215,8 @@ export class MyResourcesPage extends React.Component<MyResourcesPageProps, MyRes
                         </Level>
                     </StackItem>
                     <StackItem isFilled>
-                        <ResourcesTable resources={resources} noResourcesMessage={noResourcesMessage}/>
+                        {!sharedResourcesTab && <ResourcesTable resources={resources}/>}
+                        {sharedResourcesTab && <SharedResourcesTable resources={resources}/>}
                     </StackItem>
                 </Stack>
             </Tab>
@@ -224,15 +227,15 @@ export class MyResourcesPage extends React.Component<MyResourcesPageProps, MyRes
         return (
             <ContentPage title="resources" onRefresh={this.fetchInitialResources.bind(this)}>
                 <Tabs isFilled activeKey={this.state.activeTabKey} onSelect={this.handleTabClick}>
-                    {this.makeTab(0, 'myResources', this.state.myResources, 'notHaveAnyResource')}
-                    {this.makeTab(1, 'sharedwithMe', this.state.sharedWithMe, 'noResourcesSharedWithYou')}
+                    {this.makeTab(0, 'myResources', this.state.myResources, false)}
+                    {this.makeTab(1, 'sharedwithMe', this.state.sharedWithMe, true)}
                 </Tabs>
 
                 <Level gutter='md'>
                     <LevelItem>
                         {this.hasPrevious() && <Button onClick={this.handlePreviousClick}>&lt;<Msg msgKey='previousPage'/></Button>}
                     </LevelItem>
-                    
+
                     <LevelItem>
                         {this.hasPrevious() && <Button onClick={this.handleFirstPageClick}><Msg msgKey='firstPage'/></Button>}
                     </LevelItem>
@@ -249,7 +252,7 @@ export class MyResourcesPage extends React.Component<MyResourcesPageProps, MyRes
         this.setState({nameFilter: value});
         this.fetchFilteredResources({name: value});
     }
-        
+
     private clearNextPrev(): void {
         const newMyResources: PaginatedResources = this.state.myResources;
         newMyResources.nextUrl = '';
@@ -277,7 +280,7 @@ export class MyResourcesPage extends React.Component<MyResourcesPageProps, MyRes
         }
     }
 
-    private handleTabClick = (event: React.FormEvent<HTMLInputElement>, tabIndex: number) => {
+    private handleTabClick = (event: React.MouseEvent<HTMLInputElement>, tabIndex: number) => {
         if (this.state.activeTabKey === tabIndex) return;
 
         this.setState({

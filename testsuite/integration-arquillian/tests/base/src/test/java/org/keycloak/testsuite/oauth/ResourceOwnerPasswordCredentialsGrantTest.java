@@ -24,6 +24,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.Rule;
 import org.junit.Test;
 import org.keycloak.OAuth2Constants;
@@ -57,6 +58,7 @@ import org.keycloak.testsuite.util.UserBuilder;
 import org.keycloak.testsuite.util.UserManager;
 
 import java.io.UnsupportedEncodingException;
+import java.security.Security;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -72,6 +74,8 @@ public class ResourceOwnerPasswordCredentialsGrantTest extends AbstractKeycloakT
 
     private static String userId2;
 
+    private static String userIdMultipleOTPs;
+
     private final TimeBasedOTP totp = new TimeBasedOTP();
 
     @Rule
@@ -80,6 +84,7 @@ public class ResourceOwnerPasswordCredentialsGrantTest extends AbstractKeycloakT
     @Override
     public void beforeAbstractKeycloakTest() throws Exception {
         super.beforeAbstractKeycloakTest();
+        if (Security.getProvider("BC") == null) Security.addProvider(new BouncyCastleProvider());
     }
 
     @Override
@@ -130,6 +135,15 @@ public class ResourceOwnerPasswordCredentialsGrantTest extends AbstractKeycloakT
                 .build();
         realm.user(user2);
 
+        userIdMultipleOTPs = KeycloakModelUtils.generateId();
+        UserBuilder userBuilderMultipleOTPs = UserBuilder.create()
+                .id(userIdMultipleOTPs)
+                .username("direct-login-multiple-otps")
+                .password("password")
+                .totpSecret("firstOTPIsPreferredCredential");
+        for (int i = 2; i <= 10; i++) userBuilderMultipleOTPs.totpSecret(String.format("%s-th OTP authenticator", i));
+        realm.user(userBuilderMultipleOTPs.build());
+
         testRealms.add(realm.build());
     }
 
@@ -151,6 +165,19 @@ public class ResourceOwnerPasswordCredentialsGrantTest extends AbstractKeycloakT
     @Test
     public void grantAccessTokenWithTotp() throws Exception {
         grantAccessToken(userId2, "direct-login-otp", "resource-owner", totp.generateTOTP("totpSecret"));
+    }
+
+    @Test
+    public void grantAccessTokenWithMultipleTotp() throws Exception {
+        // Confirm user can login with 1-th OTP since it's the preferred credential
+        grantAccessToken(userIdMultipleOTPs, "direct-login-multiple-otps", "resource-owner", totp.generateTOTP("firstOTPIsPreferredCredential"));
+        // For remaining OTP tokens HTTP 401 "Unauthorized" is the allowed / expected response
+        oauth.clientId("resource-owner");
+        for (int i = 2; i <= 10; i++) {
+            String otp = totp.generateTOTP(String.format("%s-th OTP authenticator", i));
+            OAuthClient.AccessTokenResponse response = oauth.doGrantAccessTokenRequest("secret", "direct-login-multiple-otps", "password", otp);
+            assertEquals(401, response.getStatusCode());
+        }
     }
 
     @Test
@@ -349,7 +376,7 @@ public class ResourceOwnerPasswordCredentialsGrantTest extends AbstractKeycloakT
 
         OAuthClient.AccessTokenResponse response = oauth.doGrantAccessTokenRequest("invalid", "test-user@localhost", "password");
 
-        assertEquals(400, response.getStatusCode());
+        assertEquals(401, response.getStatusCode());
 
         assertEquals("unauthorized_client", response.getError());
 
@@ -368,7 +395,7 @@ public class ResourceOwnerPasswordCredentialsGrantTest extends AbstractKeycloakT
 
         OAuthClient.AccessTokenResponse response = oauth.doGrantAccessTokenRequest(null, "test-user@localhost", "password");
 
-        assertEquals(400, response.getStatusCode());
+        assertEquals(401, response.getStatusCode());
 
         assertEquals("unauthorized_client", response.getError());
 
@@ -573,7 +600,7 @@ public class ResourceOwnerPasswordCredentialsGrantTest extends AbstractKeycloakT
                 .removeDetail(Details.CODE_ID)
                 .removeDetail(Details.REDIRECT_URI)
                 .removeDetail(Details.CONSENT)
-                .error(Errors.INVALID_USER_CREDENTIALS)
+                .error(Errors.USER_NOT_FOUND)
                 .assertEvent();
     }
 

@@ -46,7 +46,6 @@ import org.jboss.shrinkwrap.undertow.api.UndertowWebArchive;
 import org.keycloak.common.util.reflections.Reflections;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
-import org.keycloak.services.filters.KeycloakSessionServletFilter;
 import org.keycloak.services.managers.ApplianceBootstrap;
 import org.keycloak.services.resources.KeycloakApplication;
 import org.keycloak.testsuite.JsonConfigProviderFactory;
@@ -88,7 +87,6 @@ public class KeycloakOnUndertow implements DeployableContainer<KeycloakOnUnderto
         di.setClassLoader(getClass().getClassLoader());
         di.setContextPath("/auth");
         di.setDeploymentName("Keycloak");
-        di.addInitParameter(KeycloakApplication.KEYCLOAK_EMBEDDED, "true");
         if (configuration.getKeycloakConfigPropertyOverridesMap() != null) {
             try {
                 di.addInitParameter(JsonConfigProviderFactory.SERVER_CONTEXT_CONFIG_PROPERTY_OVERRIDES,

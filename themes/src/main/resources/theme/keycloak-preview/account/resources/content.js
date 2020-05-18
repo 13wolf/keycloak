@@ -1,54 +1,53 @@
 
 var content = [
     {
+        id: 'personal-info',
         path: 'personal-info',
         label: 'personalInfoHtmlTitle',
-        modulePath: '/app/content/account-page/AccountPage',
+        modulePath: '/app/content/account-page/AccountPage.js',
         componentName: 'AccountPage'
     },
     {
+        id: 'security',
         label: 'Account Security',
         content: [
             {
-                path: 'security/password',
-                label: 'password',
-                modulePath: '/app/content/aia-page/AppInitiatedActionPage',
-                componentName: 'AppInitiatedActionPage',
-                kcAction: 'UPDATE_PASSWORD'
+                id: 'signingin',
+                path: 'security/signingin',
+                label: 'signingIn',
+                modulePath: '/app/content/signingin-page/SigningInPage.js',
+                componentName: 'SigningInPage',
             },
             {
-                path: 'security/authenticator',
-                label: 'authenticator',
-                modulePath: '/app/content/aia-page/AppInitiatedActionPage',
-                componentName: 'AppInitiatedActionPage',
-                kcAction: 'CONFIGURE_TOTP'
-            },
-            {
+                id: 'device-activity',
                 path: 'security/device-activity',
                 label: 'device-activity',
-                modulePath: '/app/content/device-activity-page/DeviceActivityPage',
+                modulePath: '/app/content/device-activity-page/DeviceActivityPage.js',
                 componentName: 'DeviceActivityPage'
             },
             {
+                id: 'linked-accounts',
                 path: 'security/linked-accounts',
                 label: 'linkedAccountsHtmlTitle',
-                modulePath: '/app/content/linked-accounts-page/LinkedAccountsPage',
+                modulePath: '/app/content/linked-accounts-page/LinkedAccountsPage.js',
                 componentName: 'LinkedAccountsPage',
                 hidden: !features.isLinkedAccountsEnabled
             }
         ]
     },
     {
+        id: 'applications',
         path: 'applications',
         label: 'applications',
-        modulePath: '/app/content/applications-page/ApplicationsPage',
+        modulePath: '/app/content/applications-page/ApplicationsPage.js',
         componentName: 'ApplicationsPage'
     },
     {
+        id: 'resources',
         path: 'resources',
         label: 'resources',
-        modulePath: '/app/content/my-resources-page/MyResourcesPage',
+        modulePath: '/app/content/my-resources-page/MyResourcesPage.js',
         componentName: 'MyResourcesPage',
-        hidden: true //!features.isMyResourcesEnabled
+        hidden: !features.isMyResourcesEnabled
     }
 ];
